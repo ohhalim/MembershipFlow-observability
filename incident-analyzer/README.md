@@ -56,7 +56,7 @@ API는 host port를 열지 않고 `incident-ingress`에서 Grafana webhook만 �
 Loki, Gemini, Slack에 접근하며, Spring Boot와 프론트엔드에는 외부 API 비밀값을 제공하지
 않는다.
 
-운영 CD는 동일 Dockerfile을 `membershipflow-incident-analyzer:<git-sha>`로 한 번 빌드해
+운영 CD는 동일 Dockerfile을 `membershipflow-observability-incident-analyzer:<git-sha>`로 한 번 빌드해
 API, migration, worker가 같은 불변 이미지를 사용하도록 배포한다. DB bootstrap과 migration
 완료 후 API·worker를 기동하며, API readiness와 Loki readiness를 모두 통과해야 배포 성공으로
 처리한다.
