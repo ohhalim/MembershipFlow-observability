@@ -38,7 +38,7 @@ services:
     restart: "no"
 
   incident-migrate:
-    image: ghcr.io/ohhalim/membershipflow-incident-analyzer:${INCIDENT_ANALYZER_IMAGE_TAG:-latest}
+    image: ghcr.io/ohhalim/membershipflow-observability-incident-analyzer:${INCIDENT_ANALYZER_IMAGE_TAG:-latest}
     profiles: [incident-setup]
     command: ["alembic", "upgrade", "head"]
     environment:
@@ -55,7 +55,7 @@ services:
     restart: "no"
 
   incident-api:
-    image: ghcr.io/ohhalim/membershipflow-incident-analyzer:${INCIDENT_ANALYZER_IMAGE_TAG:-latest}
+    image: ghcr.io/ohhalim/membershipflow-observability-incident-analyzer:${INCIDENT_ANALYZER_IMAGE_TAG:-latest}
     environment:
       APP_ENVIRONMENT: production
       INCIDENT_DB_HOST: mysql
@@ -86,7 +86,7 @@ services:
     restart: unless-stopped
 
   incident-worker:
-    image: ghcr.io/ohhalim/membershipflow-incident-analyzer:${INCIDENT_ANALYZER_IMAGE_TAG:-latest}
+    image: ghcr.io/ohhalim/membershipflow-observability-incident-analyzer:${INCIDENT_ANALYZER_IMAGE_TAG:-latest}
     command: ["python", "-m", "app.worker"]
     environment:
       APP_ENVIRONMENT: production
@@ -175,4 +175,3 @@ volumes:
   loki_data:
   prometheus_data:
   grafana_data:
-

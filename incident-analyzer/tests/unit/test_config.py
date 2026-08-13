@@ -43,5 +43,6 @@ def test_settings_rejects_local_webhook_secret_in_production() -> None:
         Settings(
             incident_db_password="runtime_test_password",
             app_environment="production",
+            incident_webhook_secret="local_webhook_secret_change_before_production",
             _env_file=None,
         )
