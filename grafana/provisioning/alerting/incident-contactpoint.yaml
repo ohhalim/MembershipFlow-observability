@@ -1,0 +1,17 @@
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: incident-analyzer
+    receivers:
+      - uid: incident-analyzer-webhook
+        type: webhook
+        settings:
+          url: http://incident-api:8000/internal/incidents
+          httpMethod: POST
+          maxAlerts: 20
+          hmacConfig:
+            secret: ${INCIDENT_WEBHOOK_SECRET}
+            header: X-Grafana-Alerting-Signature
+            timestampHeader: X-Grafana-Alerting-Timestamp
+        disableResolveMessage: true

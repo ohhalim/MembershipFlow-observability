@@ -1,0 +1,9 @@
+apiVersion: 1
+
+policies:
+  - orgId: 1
+    receiver: incident-analyzer
+    group_by: ['alertname', 'service', 'environment', 'route']
+    group_wait: 0s
+    group_interval: 1m
+    repeat_interval: 6h

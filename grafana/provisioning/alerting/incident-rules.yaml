@@ -1,0 +1,46 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: application-errors
+    folder: AI Incident Analysis
+    interval: 1m
+    rules:
+      - uid: application-error-detected
+        title: "운영 애플리케이션 ERROR 감지"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: loki
+            model:
+              editorMode: code
+              expr: 'sum(count_over_time({service="MembershipFlow", environment="production", level="ERROR"}[1m]))'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              queryType: instant
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0]
+              refId: C
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        labels:
+          ai_analyze: "true"
+          service: MembershipFlow
+          environment: production
+          severity: error
+          route: application-log
+        annotations:
+          summary: "최근 1분 동안 운영 애플리케이션 ERROR 로그 감지"

@@ -1,0 +1,21 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  - job_name: membershipflow-backend
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: [membershipflow-app:8081]
+
+  - job_name: membershipflow-host
+    static_configs:
+      - targets: [membershipflow-app:9100]
+
+  - job_name: membershipflow-loki
+    static_configs:
+      - targets: [loki:3100]
+

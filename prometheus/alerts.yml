@@ -1,0 +1,29 @@
+groups:
+  - name: membershipflow-host
+    rules:
+      - alert: HostLowAvailableMemory
+        expr: node_memory_MemAvailable_bytes{job="membershipflow-host"} / node_memory_MemTotal_bytes{job="membershipflow-host"} < 0.10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: EC2 available memory below 10%
+          description: 'Available memory has remained below 10% for 5 minutes.'
+
+      - alert: HostHighCpuIowait
+        expr: avg by (instance) (rate(node_cpu_seconds_total{job="membershipflow-host", mode="iowait"}[5m])) > 0.20
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: EC2 CPU iowait above 20%
+          description: 'Average CPU iowait has remained above 20% for 5 minutes.'
+
+      - alert: HostDiskIoSaturation
+        expr: max by (instance) (rate(node_disk_io_time_seconds_total{job="membershipflow-host", device=~"nvme[0-9]+n[0-9]+"}[5m])) > 0.80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: EC2 NVMe utilization above 80%
+          description: 'NVMe I/O utilization has remained above 80% for 5 minutes.'

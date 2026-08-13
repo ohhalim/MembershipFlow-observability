@@ -1,0 +1,42 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: application-availability
+    folder: AI Incident Analysis
+    interval: 30s
+    rules:
+      - uid: membershipflow-backend-down
+        title: "운영 백엔드 응답 중단"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'up{job="membershipflow-backend"}'
+              instant: true
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [1]
+              refId: C
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 1m
+        labels:
+          ai_analyze: "true"
+          service: MembershipFlow
+          environment: production
+          severity: critical
+          route: application-health
+        annotations:
+          summary: "운영 백엔드 Prometheus scrape가 1분 이상 실패"

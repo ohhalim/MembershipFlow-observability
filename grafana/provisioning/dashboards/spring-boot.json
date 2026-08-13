@@ -1,0 +1,149 @@
+{
+  "title": "MembershipFlow Backend",
+  "uid": "membershipflow",
+  "version": 1,
+  "schemaVersion": 38,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "HTTP 요청 수 (req/s)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"membershipflow-backend\"}[1m])) by (uri, method, status)",
+          "legendFormat": "{{method}} {{uri}} {{status}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "HTTP 응답 시간 p95 (ms)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{job=\"membershipflow-backend\"}[1m])) by (uri, le)) * 1000",
+          "legendFormat": "p95 {{uri}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "JVM Heap 사용량 (MB)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "jvm_memory_used_bytes{job=\"membershipflow-backend\", area=\"heap\"} / 1024 / 1024",
+          "legendFormat": "used"
+        },
+        {
+          "expr": "jvm_memory_max_bytes{job=\"membershipflow-backend\", area=\"heap\"} / 1024 / 1024",
+          "legendFormat": "max"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "JVM GC 횟수 (회/s)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(jvm_gc_pause_seconds_count{job=\"membershipflow-backend\"}[1m])) by (action)",
+          "legendFormat": "{{action}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "DB 커넥션 풀",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "hikaricp_connections_active{job=\"membershipflow-backend\"}",
+          "legendFormat": "active"
+        },
+        {
+          "expr": "hikaricp_connections_idle{job=\"membershipflow-backend\"}",
+          "legendFormat": "idle"
+        },
+        {
+          "expr": "hikaricp_connections_max{job=\"membershipflow-backend\"}",
+          "legendFormat": "max"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "HTTP 에러율 (4xx/5xx)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"membershipflow-backend\", status=~\"4..\"}[1m]))",
+          "legendFormat": "4xx"
+        },
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"membershipflow-backend\", status=~\"5..\"}[1m]))",
+          "legendFormat": "5xx"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "JVM 스레드",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 24, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "jvm_threads_live_threads{job=\"membershipflow-backend\"}",
+          "legendFormat": "live threads"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "프로세스 가동 시간",
+      "type": "stat",
+      "gridPos": { "x": 6, "y": 24, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "process_uptime_seconds{job=\"membershipflow-backend\"}",
+          "legendFormat": ""
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 9,
+      "title": "CPU 사용률",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 24, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "process_cpu_usage{job=\"membershipflow-backend\"} * 100",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent" } }
+    },
+    {
+      "id": 10,
+      "title": "Non-Heap 메모리 (MB)",
+      "type": "stat",
+      "gridPos": { "x": 18, "y": 24, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "jvm_memory_used_bytes{job=\"membershipflow-backend\", area=\"nonheap\"} / 1024 / 1024",
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "megabytes" } }
+    }
+  ]
+}

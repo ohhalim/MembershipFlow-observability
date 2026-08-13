@@ -1,0 +1,4 @@
+-r requirements.in
+pytest==9.1.1
+ruff==0.16.2
+testcontainers[mysql]==4.15.0
