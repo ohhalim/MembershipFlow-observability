@@ -1,0 +1,117 @@
+name: CD Pipeline — Observability
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/membershipflow-incident-analyzer
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push incident analyzer
+        uses: docker/build-push-action@v5
+        with:
+          context: incident-analyzer
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || vars.MONITORING_DEPLOY_ENABLED == 'true')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare deployment directory
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.MONITORING_EC2_HOST }}
+          username: ${{ secrets.MONITORING_EC2_USER }}
+          key: ${{ secrets.MONITORING_EC2_SSH_KEY }}
+          script: |
+            sudo mkdir -p /opt/membershipflow-observability
+            sudo chown -R "$(id -un):$(id -gn)" /opt/membershipflow-observability
+            rm -rf /opt/membershipflow-observability/grafana/provisioning
+
+      - name: Copy deployment files
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.MONITORING_EC2_HOST }}
+          username: ${{ secrets.MONITORING_EC2_USER }}
+          key: ${{ secrets.MONITORING_EC2_SSH_KEY }}
+          source: "docker-compose.yml,grafana/,prometheus/,loki/,incident-analyzer/scripts/bootstrap-database.sh,.github/scripts/wait-for-incident-health.sh"
+          target: /opt/membershipflow-observability/
+
+      - name: Deploy monitoring stack
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.MONITORING_EC2_HOST }}
+          username: ${{ secrets.MONITORING_EC2_USER }}
+          key: ${{ secrets.MONITORING_EC2_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd /opt/membershipflow-observability
+
+            for required_key in \
+              APP_SERVER_PRIVATE_IP \
+              MONITORING_DB_ROOT_PASSWORD \
+              INCIDENT_DB_RUNTIME_PASSWORD \
+              INCIDENT_DB_MIGRATION_PASSWORD \
+              INCIDENT_WEBHOOK_SECRET \
+              GEMINI_API_KEY \
+              LLM_MODEL \
+              SLACK_WEBHOOK_URL \
+              GRAFANA_PASSWORD; do
+              if ! grep -Eq "^${required_key}=.+$" .env; then
+                echo "ERROR: ${required_key} is not configured"
+                exit 1
+              fi
+            done
+
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+            export INCIDENT_ANALYZER_IMAGE_TAG=${{ github.sha }}
+            docker compose config -q
+
+            docker run --rm --entrypoint /bin/promtool \
+              -v "$PWD/prometheus:/etc/prometheus:ro" \
+              prom/prometheus:v3.5.0 \
+              check config /etc/prometheus/prometheus.yml
+
+            docker compose pull
+            docker compose up -d mysql loki prometheus
+            docker compose --profile incident-setup run --rm incident-db-bootstrap
+            docker compose --profile incident-setup run --rm --no-deps incident-migrate
+            docker compose up -d incident-api incident-worker grafana
+            bash .github/scripts/wait-for-incident-health.sh
+
+            if docker compose logs --since 2m grafana | grep -Eiq 'logger=provisioning.alerting.*level=error|failed to provision alerting'; then
+              echo "ERROR: Grafana provisioning failure detected"
+              docker compose logs --since 2m grafana
+              exit 1
+            fi
+
+            docker image prune -f
+
