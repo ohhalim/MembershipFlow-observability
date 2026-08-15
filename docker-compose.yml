@@ -64,7 +64,7 @@ services:
       INCIDENT_DB_PASSWORD: ${INCIDENT_DB_RUNTIME_PASSWORD}
       DB_POOL_SIZE: 2
       DB_MAX_OVERFLOW: 0
-      EXPECTED_DB_REVISION: 0003_slack_delivery
+      EXPECTED_DB_REVISION: 0004_incident_episode_dedup
       INCIDENT_WEBHOOK_SECRET: ${INCIDENT_WEBHOOK_SECRET}
     read_only: true
     mem_limit: 160m

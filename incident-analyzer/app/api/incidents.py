@@ -50,5 +50,6 @@ async def create_incidents(
     )
     return {
         "accepted": len(created),
+        "duplicates": len(payload.alerts) - len(created),
         "incidentIds": [item.incident_id for item in created],
     }
