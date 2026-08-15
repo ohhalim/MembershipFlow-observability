@@ -12,7 +12,9 @@ class Base(DeclarativeBase):
 
 class IncidentModel(Base):
     __tablename__ = "incidents"
-    __table_args__ = (Index("ix_incidents_dedup_started", "dedup_key", "started_at"),)
+    __table_args__ = (
+        UniqueConstraint("dedup_key", "started_at", name="uq_incident_episode"),
+    )
 
     id: Mapped[str] = mapped_column(String(26), primary_key=True)
     external_fingerprint: Mapped[str | None] = mapped_column(String(255))

@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     db_pool_size: int = Field(default=2, ge=1, le=2)
     db_max_overflow: int = Field(default=0, ge=0, le=0)
     db_pool_timeout_seconds: int = Field(default=2, ge=1, le=5)
-    expected_db_revision: str = "0003_slack_delivery"
+    expected_db_revision: str = "0004_incident_episode_dedup"
     incident_webhook_secret: SecretStr = SecretStr(
         "local_webhook_secret_change_before_production"
     )
