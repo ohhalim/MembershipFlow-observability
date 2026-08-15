@@ -189,6 +189,70 @@ def test_migration_and_incident_job_transaction(mysql_database) -> None:
 
 
 @pytest.mark.integration
+def test_repeated_alert_episode_creates_one_incident_and_job(mysql_database) -> None:
+    runtime_engine = create_engine(
+        runtime_url(mysql_database, "membershipflow_incident")
+    )
+    session_factory = sessionmaker(bind=runtime_engine, expire_on_commit=False)
+    repository = IncidentRepository()
+    started_at = datetime.now(UTC)
+    repeated = CreateIncidentCommand(
+        dedup_key="repeated-batch-alert",
+        started_at=started_at,
+        masked_event={"alertname": "CollectBatchStale"},
+    )
+
+    with session_factory() as session:
+        first = repository.create_many_with_jobs(session, [repeated])
+    with session_factory() as session:
+        duplicate = repository.create_many_with_jobs(session, [repeated])
+    with session_factory() as session:
+        next_episode = repository.create_many_with_jobs(
+            session,
+            [
+                CreateIncidentCommand(
+                    dedup_key="repeated-batch-alert",
+                    started_at=started_at.replace(
+                        microsecond=(started_at.microsecond + 1) % 1_000_000
+                    ),
+                    masked_event={"alertname": "CollectBatchStale"},
+                )
+            ],
+        )
+
+    assert len(first) == 1
+    assert duplicate == []
+    assert len(next_episode) == 1
+    with Session(runtime_engine) as session:
+        assert session.scalar(select(func.count()).select_from(IncidentModel)) >= 2
+        duplicate_incidents = session.scalar(
+            select(func.count())
+            .select_from(IncidentModel)
+            .where(
+                IncidentModel.dedup_key == "repeated-batch-alert",
+                IncidentModel.started_at
+                == started_at.astimezone(UTC).replace(tzinfo=None),
+            )
+        )
+        assert duplicate_incidents == 1
+
+    with runtime_engine.begin() as connection:
+        connection.execute(
+            text(
+                "DELETE FROM analysis_jobs WHERE incident_id IN "
+                "(SELECT id FROM incidents WHERE dedup_key = :dedup_key)"
+            ),
+            {"dedup_key": "repeated-batch-alert"},
+        )
+        connection.execute(
+            text("DELETE FROM incidents WHERE dedup_key = :dedup_key"),
+            {"dedup_key": "repeated-batch-alert"},
+        )
+
+    runtime_engine.dispose()
+
+
+@pytest.mark.integration
 def test_claim_and_complete_analysis_job(mysql_database) -> None:
     runtime_engine = create_engine(
         runtime_url(mysql_database, "membershipflow_incident")

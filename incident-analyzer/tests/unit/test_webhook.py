@@ -152,3 +152,59 @@ def test_incident_endpoint_accepts_signed_payload(monkeypatch) -> None:
 
     assert response.status_code == 202
     assert response.json()["accepted"] == 1
+    assert response.json()["duplicates"] == 0
+
+
+def test_incident_endpoint_reports_duplicate_payload(monkeypatch) -> None:
+    now = int(datetime.now(UTC).timestamp())
+    body = json.dumps(
+        {
+            "status": "firing",
+            "alerts": [
+                {
+                    "status": "firing",
+                    "labels": {"alertname": "ApplicationErrorBurst"},
+                    "startsAt": datetime.now(UTC).isoformat(),
+                }
+            ],
+        },
+        separators=(",", ":"),
+    ).encode()
+
+    class FakeRepository:
+        def create_many_with_jobs(self, _session, _commands):
+            return []
+
+    application = main_module.create_app()
+    application.dependency_overrides[get_session] = lambda: object()
+    monkeypatch.setattr(incidents_api, "IncidentRepository", FakeRepository)
+    monkeypatch.setattr(
+        incidents_api,
+        "get_settings",
+        lambda: type(
+            "TestSettings",
+            (),
+            {
+                "incident_payload_max_bytes": 65_536,
+                "incident_webhook_secret": type(
+                    "Secret", (), {"get_secret_value": lambda self: SECRET}
+                )(),
+                "incident_webhook_tolerance_seconds": 300,
+            },
+        )(),
+    )
+
+    response = TestClient(application).post(
+        "/internal/incidents",
+        content=body,
+        headers={
+            "Content-Type": "application/json",
+            "X-Grafana-Alerting-Timestamp": str(now),
+            "X-Grafana-Alerting-Signature": sign(body, str(now)),
+        },
+    )
+
+    assert response.status_code == 202
+    assert response.json()["accepted"] == 0
+    assert response.json()["duplicates"] == 1
+    assert response.json()["incidentIds"] == []
