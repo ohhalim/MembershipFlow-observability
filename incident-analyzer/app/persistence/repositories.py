@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 import ulid
 from sqlalchemy import or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.domain.evidence import EvidenceBundle
@@ -87,7 +88,15 @@ class IncidentRepository:
                     created_at=now,
                     updated_at=now,
                 )
-                session.add_all([incident, job])
+                try:
+                    with session.begin_nested():
+                        session.add(incident)
+                        session.flush()
+                except IntegrityError as error:
+                    if "uq_incident_episode" in str(error.orig):
+                        continue
+                    raise
+                session.add(job)
                 session.flush()
                 created.append(
                     CreatedIncident(
