@@ -1,0 +1,128 @@
+{
+  "caseId": "payment-lock-pool-exhaustion-20260815",
+  "source": {
+    "type": "reconstructed-production-verification",
+    "incidentId": "01M01RS5D5DN9GW28YK9WBQMN2",
+    "note": "운영 원문 반출 없이 검증된 수치와 Slack 분석 요약만으로 재구성한 마스킹 fixture"
+  },
+  "evidence": {
+    "schema_version": "1",
+    "collector_version": "loki-v1",
+    "window_start": "2026-08-15T03:47:20Z",
+    "window_end": "2026-08-15T03:57:20Z",
+    "log_evidence": [
+      {
+        "evidence_id": "L1",
+        "status": "OK",
+        "signature": "CannotAcquireLockException: lock wait timeout",
+        "count": 10,
+        "samples": [
+          "Lock wait timeout exceeded; try restarting transaction"
+        ]
+      },
+      {
+        "evidence_id": "L2",
+        "status": "OK",
+        "signature": "SQLTransientConnectionException: HikariPool connection timeout",
+        "count": 10,
+        "samples": [
+          "HikariPool-1 - Connection is not available, request timed out after 30000ms"
+        ]
+      }
+    ],
+    "metadata": {
+      "route": "/api/v1/subscriptions/prepare",
+      "requests": 20,
+      "httpStatusCounts": {
+        "200": 10,
+        "500": 10
+      },
+      "observedMetrics": {
+        "hikariPendingMax": 12,
+        "hikariActiveMax": 10,
+        "lokiErrorCount": 20
+      }
+    }
+  },
+  "baselineAnalysis": {
+    "status": "ANALYZED",
+    "facts": [
+      {
+        "statement": "DB 락 대기 오류가 10건 확인되었습니다.",
+        "evidenceIds": [
+          "L1"
+        ]
+      },
+      {
+        "statement": "Hikari 커넥션 풀 대기 시간 초과와 HTTP 500 요청 실패가 확인되었습니다.",
+        "evidenceIds": [
+          "L2"
+        ]
+      }
+    ],
+    "hypotheses": [
+      {
+        "cause": "DB 락 경합으로 커넥션 반환이 지연되어 풀이 고갈된 가능성",
+        "evidenceIds": [
+          "L1",
+          "L2"
+        ],
+        "confidence": "HIGH"
+      },
+      {
+        "cause": "애플리케이션의 커넥션 누수 가능성",
+        "evidenceIds": [
+          "L2"
+        ],
+        "confidence": "HIGH"
+      }
+    ],
+    "excludedCandidates": [],
+    "missingEvidence": [
+      "락 해제 후 Hikari active 회복 시계열"
+    ],
+    "nextChecks": [
+      "같은 시간 범위의 Hikari pending·active·max 시계열을 확인합니다."
+    ],
+    "rootCauseConfirmed": false
+  },
+  "expectations": {
+    "requiredConcepts": [
+      {
+        "id": "database_lock",
+        "terms": [
+          "DB 락",
+          "데이터베이스 락",
+          "database lock",
+          "lock wait"
+        ]
+      },
+      {
+        "id": "connection_pool_exhaustion",
+        "terms": [
+          "커넥션 풀",
+          "connection pool",
+          "Hikari"
+        ]
+      },
+      {
+        "id": "request_failure",
+        "terms": [
+          "HTTP 500",
+          "요청 실패",
+          "request failure"
+        ]
+      }
+    ],
+    "forbiddenClaims": [
+      {
+        "id": "unsupported_connection_leak",
+        "terms": [
+          "커넥션 누수",
+          "connection leak"
+        ]
+      }
+    ],
+    "rootCauseConfirmed": false
+  }
+}
