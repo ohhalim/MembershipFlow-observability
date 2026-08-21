@@ -17,6 +17,25 @@ def test_settings_restrict_database_and_pool() -> None:
     assert "runtime_test_password" not in repr(settings.database_url())
 
 
+def test_settings_allow_two_minute_llm_analysis() -> None:
+    settings = Settings(
+        incident_db_password="runtime_test_password",
+        _env_file=None,
+    )
+
+    assert settings.llm_timeout_seconds == 120
+    assert settings.job_lease_seconds > settings.llm_timeout_seconds
+
+
+def test_settings_reject_llm_timeout_over_two_minutes() -> None:
+    with pytest.raises(ValidationError):
+        Settings(
+            incident_db_password="runtime_test_password",
+            llm_timeout_seconds=121,
+            _env_file=None,
+        )
+
+
 @pytest.mark.parametrize(
     ("field", "value"),
     [

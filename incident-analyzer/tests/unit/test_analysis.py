@@ -1,3 +1,4 @@
+import asyncio
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
@@ -131,3 +132,36 @@ async def test_gemini_sdk_request_uses_pinned_model_and_schema(monkeypatch) -> N
     assert "additionalProperties" not in str(config.response_json_schema)
     assert config.max_output_tokens == 800
     assert config.temperature is None
+
+
+@pytest.mark.anyio
+async def test_gemini_timeout_limits_entire_retry_window(monkeypatch) -> None:
+    attempts = 0
+
+    class FakeAsyncModels:
+        async def generate_content(self, **_kwargs):
+            nonlocal attempts
+            attempts += 1
+            await asyncio.sleep(0.05)
+
+    class FakeAsyncClient:
+        def __init__(self) -> None:
+            self.models = FakeAsyncModels()
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+    class FakeClient:
+        def __init__(self, **_kwargs) -> None:
+            self.aio = FakeAsyncClient()
+
+    monkeypatch.setattr(llm_module.genai, "Client", FakeClient)
+    client = GeminiClient("test-api-key", "pinned-test-model", 0.01, 800)
+
+    with pytest.raises(TimeoutError):
+        await client._generate_with_retry(evidence_bundle().model_dump_json())
+
+    assert attempts == 1

@@ -72,9 +72,9 @@ class GeminiClient:
 
     async def _generate_with_retry(self, payload: str):
         last_error: Exception | None = None
-        for attempt in range(2):
-            try:
-                async with asyncio.timeout(self._timeout_seconds):
+        async with asyncio.timeout(self._timeout_seconds):
+            for attempt in range(2):
+                try:
                     async with genai.Client(api_key=self._api_key).aio as client:
                         return await client.models.generate_content(
                             model=self._model,
@@ -90,17 +90,11 @@ class GeminiClient:
                                 max_output_tokens=self._max_output_tokens,
                             ),
                         )
-            except errors.APIError as exc:
-                last_error = exc
-                code = getattr(exc, "code", 0) or 0
-                if attempt == 0 and (code == 429 or code >= 500):
-                    await asyncio.sleep(1)
-                    continue
-                raise
-            except TimeoutError as exc:
-                last_error = exc
-                if attempt == 0:
-                    await asyncio.sleep(1)
-                    continue
-                raise
+                except errors.APIError as exc:
+                    last_error = exc
+                    code = getattr(exc, "code", 0) or 0
+                    if attempt == 0 and (code == 429 or code >= 500):
+                        await asyncio.sleep(1)
+                        continue
+                    raise
         raise RuntimeError("Gemini request failed") from last_error
