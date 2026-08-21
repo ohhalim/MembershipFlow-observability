@@ -28,13 +28,13 @@ class Settings(BaseSettings):
     loki_query_limit: int = Field(default=200, ge=1, le=200)
     gemini_api_key: SecretStr | None = None
     llm_model: str | None = None
-    llm_timeout_seconds: float = Field(default=20.0, ge=1.0, le=20.0)
+    llm_timeout_seconds: float = Field(default=120.0, ge=1.0, le=120.0)
     llm_max_output_tokens: int = Field(default=4096, ge=128, le=4096)
     slack_webhook_url: SecretStr | None = None
     slack_timeout_seconds: float = Field(default=5.0, ge=1.0, le=10.0)
     notification_lease_seconds: int = Field(default=30, ge=10, le=120)
     notification_max_attempts: int = Field(default=5, ge=1, le=10)
-    job_lease_seconds: int = Field(default=120, ge=30, le=300)
+    job_lease_seconds: int = Field(default=300, ge=120, le=300)
     job_max_attempts: int = Field(default=3, ge=1, le=5)
 
     @field_validator("incident_db_name")
