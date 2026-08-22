@@ -1,8 +1,9 @@
 import hashlib
 import hmac
+import math
 import time
 from datetime import UTC, datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -18,6 +19,7 @@ class GrafanaAlert(BaseModel):
     labels: dict[str, str]
     starts_at: datetime = Field(alias="startsAt")
     fingerprint: str | None = Field(default=None, max_length=255)
+    values: dict[str, float] = Field(default_factory=dict)
 
     @field_validator("starts_at")
     @classmethod
@@ -25,6 +27,23 @@ class GrafanaAlert(BaseModel):
         if value.tzinfo is None or value.utcoffset() is None:
             raise ValueError("startsAt must include a timezone")
         return value
+
+    @field_validator("values", mode="before")
+    @classmethod
+    def keep_finite_numeric_values(cls, value: Any) -> dict[str, float]:
+        if not isinstance(value, dict):
+            return {}
+
+        safe_values: dict[str, float] = {}
+        for key, raw_value in list(value.items())[:10]:
+            if not isinstance(key, str) or len(key) > 16:
+                continue
+            if isinstance(raw_value, bool) or not isinstance(raw_value, (int, float)):
+                continue
+            numeric_value = float(raw_value)
+            if math.isfinite(numeric_value):
+                safe_values[key] = numeric_value
+        return safe_values
 
 
 class GrafanaWebhook(BaseModel):
@@ -91,7 +110,11 @@ def to_create_commands(payload: GrafanaWebhook) -> list[CreateIncidentCommand]:
                 dedup_key=dedup_key,
                 started_at=alert.starts_at.astimezone(UTC),
                 external_fingerprint=alert.fingerprint,
-                masked_event={"status": alert.status, "labels": labels},
+                masked_event={
+                    "status": alert.status,
+                    "labels": labels,
+                    "values": alert.values,
+                },
             )
         )
     return commands
