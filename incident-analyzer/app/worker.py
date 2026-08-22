@@ -7,6 +7,7 @@ from uuid import uuid4
 from google.genai import errors
 from pydantic import ValidationError
 
+from app.collectors.alert import build_alert_evidence
 from app.collectors.loki import LokiClient
 from app.config import Settings, get_settings
 from app.domain.notification import DeliveryFailure
@@ -47,7 +48,9 @@ async def run_once(
             settings.loki_query_limit,
         )
         evidence = await collector.collect(claimed.started_at)
-        useful = any(
+        evidence.alert_evidence = build_alert_evidence(claimed.masked_event)
+        evidence.collector_version = "grafana-loki-mysql-v3"
+        useful = bool(evidence.alert_evidence) or any(
             item.status == "OK" and item.count > 0 for item in evidence.log_evidence
         )
         if useful:

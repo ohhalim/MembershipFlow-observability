@@ -447,5 +447,13 @@ async def test_worker_moves_pending_job_to_succeeded(
         )
         assert job is not None
         assert job.status == "SUCCEEDED"
+        stored_evidence = session.scalar(
+            select(EvidenceBundleModel).where(
+                EvidenceBundleModel.incident_id == created.incident_id
+            )
+        )
+        assert stored_evidence is not None
+        assert stored_evidence.collector_version == "grafana-loki-mysql-v3"
+        assert stored_evidence.content_json["alert_evidence"][0]["evidence_id"] == "A1"
 
     runtime_engine.dispose()

@@ -7,7 +7,7 @@ MembershipFlow 운영 서버와 분리된 관찰·장애 분석 시스템이다.
 - 운영 Spring Boot 및 호스트 메트릭 수집
 - 운영 Alloy가 전송한 JSON 로그 저장
 - Grafana 경보 평가
-- Loki 근거 수집 및 Gemini 분석
+- Grafana 경보 평가값과 Loki 근거 수집 및 Gemini 분석
 - Slack 인시던트 전송
 - 분석 작업과 전송 이력을 위한 독립 `membershipflow_incident` DB 운영
 
@@ -36,3 +36,11 @@ issue branch -> develop -> main -> monitoring EC2
 
 비밀값과 실제 운영 로그는 저장소에 커밋하지 않는다.
 
+## Automatic incident rules
+
+- 운영 애플리케이션 `ERROR` 로그
+- 운영 백엔드 및 MySQL exporter 응답 중단
+- 시세 수집·정기결제 배치 미실행
+- MySQL 락 대기·데드락·느린 쿼리
+- HikariCP 커넥션 대기
+- 운영 서버 루트 파일시스템 여유 공간 15% 미만

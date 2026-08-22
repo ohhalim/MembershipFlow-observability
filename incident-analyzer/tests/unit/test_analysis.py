@@ -7,7 +7,7 @@ from pydantic import ValidationError
 
 import app.llm.gemini_client as llm_module
 from app.domain.analysis import AnalysisResult
-from app.domain.evidence import EvidenceBundle, LogEvidence
+from app.domain.evidence import AlertEvidence, EvidenceBundle, LogEvidence
 from app.llm import GeminiClient
 
 
@@ -63,6 +63,26 @@ def test_analysis_serializes_evidence_ids_with_external_contract() -> None:
 
     assert serialized["facts"][0]["evidenceIds"] == ["L1"]
     assert "evidence_ids" not in serialized["facts"][0]
+
+
+def test_evidence_bundle_accepts_alert_evidence_reference() -> None:
+    evidence = evidence_bundle()
+    evidence.alert_evidence = [
+        AlertEvidence(
+            evidence_id="A1",
+            alert_name="DatabaseDeadlockDetected",
+            service="MembershipFlow-MySQL",
+            environment="production",
+            route="database-deadlock",
+            severity="critical",
+            values={"A": 1.0, "C": 1.0},
+        )
+    ]
+    result = AnalysisResult.model_validate(valid_result("A1"))
+
+    result.validate_evidence_references(evidence.evidence_ids())
+
+    assert evidence.evidence_ids() == {"L1", "A1"}
 
 
 @pytest.mark.anyio

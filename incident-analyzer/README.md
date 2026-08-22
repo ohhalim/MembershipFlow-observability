@@ -1,8 +1,8 @@
 # MembershipFlow Incident Analyzer
 
-현재 범위는 HMAC 기반 incident 접수, 전용 MySQL 작업 큐, Loki log Evidence 조회,
-Gemini 구조화 분석, Evidence·분석 결과 저장, Slack 장애 알림 전송까지다. Prometheus
-Evidence는 포함하지 않는다.
+현재 범위는 HMAC 기반 incident 접수, 전용 MySQL 작업 큐, Grafana 경보 평가값과
+Loki log Evidence 조회, Gemini 구조화 분석, Evidence·분석 결과 저장, Slack 장애 알림
+전송까지다. Prometheus 추가 조회 Evidence는 포함하지 않는다.
 
 ## 디렉터리 구조
 

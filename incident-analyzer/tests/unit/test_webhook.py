@@ -82,6 +82,12 @@ def test_payload_keeps_only_allowlisted_labels() -> None:
                     },
                     "startsAt": datetime.now(UTC).isoformat(),
                     "fingerprint": "fixture-1",
+                    "values": {
+                        "A": 0.91,
+                        "C": 1,
+                        "unsafe": "member@example.com",
+                        "infinite": float("inf"),
+                    },
                 }
             ],
         }
@@ -92,6 +98,7 @@ def test_payload_keeps_only_allowlisted_labels() -> None:
 
     assert "email" not in serialized
     assert "token" not in serialized
+    assert command.masked_event["values"] == {"A": 0.91, "C": 1.0}
     assert (
         command.dedup_key
         == hashlib.sha256(
