@@ -49,6 +49,8 @@ def test_render_incident_message_contains_bounded_analysis() -> None:
     assert "동일 예외 23건 확인" in rendered
     assert "외부 응답 지연 후보" in rendered
     assert "원인 확정 아님" in rendered
+    assert "2026-08-10 11:00:00 KST" in rendered
+    assert "2026-08-10T02:00:00+00:00" not in rendered
     assert "masked sample" not in rendered
 
 

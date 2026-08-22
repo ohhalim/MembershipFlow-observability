@@ -29,8 +29,10 @@ groups:
                     type: gt
                     params: [93600]
               refId: C
-        noDataState: Alerting
-        execErrState: Alerting
+        # 백엔드 중단으로 메트릭이 사라진 경우는 application-health 규칙이 담당한다.
+        # No Data를 배치 미실행으로 해석하면 동일 장애가 두 경로로 중복 통지된다.
+        noDataState: OK
+        execErrState: Error
         for: 5m
         labels:
           ai_analyze: "true"
@@ -64,8 +66,10 @@ groups:
                     type: gt
                     params: [93600]
               refId: C
-        noDataState: Alerting
-        execErrState: Alerting
+        # 백엔드 중단으로 메트릭이 사라진 경우는 application-health 규칙이 담당한다.
+        # No Data를 배치 미실행으로 해석하면 동일 장애가 두 경로로 중복 통지된다.
+        noDataState: OK
+        execErrState: Error
         for: 5m
         labels:
           ai_analyze: "true"
