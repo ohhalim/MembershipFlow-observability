@@ -104,7 +104,8 @@ jobs:
             docker compose up -d mysql loki prometheus
             docker compose --profile incident-setup run --rm incident-db-bootstrap
             docker compose --profile incident-setup run --rm --no-deps incident-migrate
-            docker compose up -d incident-api incident-worker grafana
+            docker compose up -d incident-api incident-worker
+            docker compose up -d --force-recreate --no-deps grafana
             bash .github/scripts/wait-for-incident-health.sh
 
             if docker compose logs --since 2m grafana | grep -Eiq 'logger=provisioning.alerting.*level=error|failed to provision alerting'; then
