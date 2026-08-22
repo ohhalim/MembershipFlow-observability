@@ -1,0 +1,186 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: database-resource-incidents
+    folder: AI Incident Analysis
+    interval: 30s
+    rules:
+      - uid: membershipflow-database-lock-wait
+        title: "운영 DB 락 대기 지속"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 120
+              to: 0
+            datasourceUid: loki
+            model:
+              editorMode: code
+              expr: 'sum(count_over_time({service="MembershipFlow-MySQL", op="query_data_locks"}[30s]))'
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              queryType: instant
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0]
+              refId: C
+        noDataState: OK
+        execErrState: Error
+        for: 30s
+        labels:
+          ai_analyze: "true"
+          service: MembershipFlow-MySQL
+          environment: production
+          severity: warning
+          route: database-lock
+        annotations:
+          summary: "운영 MySQL 락 대기 로그가 30초 이상 지속"
+
+      - uid: membershipflow-database-deadlock
+        title: "운영 DB 데드락 감지"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'sum(increase(mysql_info_schema_innodb_metrics_lock_lock_deadlocks_total{job="membershipflow-mysql"}[5m]))'
+              instant: true
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0]
+              refId: C
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        labels:
+          ai_analyze: "true"
+          service: MembershipFlow-MySQL
+          environment: production
+          severity: critical
+          route: database-deadlock
+        annotations:
+          summary: "최근 5분 동안 운영 MySQL 데드락 증가 감지"
+
+      - uid: membershipflow-hikari-pending
+        title: "운영 DB 커넥션 풀 대기"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'max(hikaricp_connections_pending{job="membershipflow-backend"})'
+              instant: true
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0]
+              refId: C
+        noDataState: OK
+        execErrState: Error
+        for: 1m
+        labels:
+          ai_analyze: "true"
+          service: MembershipFlow
+          environment: production
+          severity: critical
+          route: database-connection-pool
+        annotations:
+          summary: "Hikari pending connection이 1분 이상 유지"
+
+      - uid: membershipflow-database-slow-query
+        title: "운영 DB 느린 쿼리 감지"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'sum(increase(mysql_global_status_slow_queries{job="membershipflow-mysql"}[5m]))'
+              instant: true
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0]
+              refId: C
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        labels:
+          ai_analyze: "true"
+          service: MembershipFlow-MySQL
+          environment: production
+          severity: warning
+          route: database-slow-query
+        annotations:
+          summary: "최근 5분 동안 운영 MySQL Slow_queries 증가 감지"
+
+      - uid: membershipflow-host-disk-low
+        title: "운영 서버 디스크 여유 공간 부족"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'min(node_filesystem_avail_bytes{job="membershipflow-host", mountpoint="/", fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{job="membershipflow-host", mountpoint="/", fstype!~"tmpfs|overlay"})'
+              instant: true
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [0.15]
+              refId: C
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        labels:
+          ai_analyze: "true"
+          service: MembershipFlow-Host
+          environment: production
+          severity: critical
+          route: host-disk-space
+        annotations:
+          summary: "운영 서버 루트 파일시스템 여유 공간 15% 미만"

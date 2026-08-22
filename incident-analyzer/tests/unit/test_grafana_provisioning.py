@@ -60,6 +60,46 @@ def test_batch_rules_use_process_start_as_restart_grace_period() -> None:
     assert "datasourceUid: prometheus" in rule
 
 
+def test_database_and_disk_incident_rules_cover_operational_failure_modes() -> None:
+    rule = read(PROVISIONING_ROOT / "alerting" / "database-resource-rules.yaml")
+
+    expected_rules = {
+        "membershipflow-database-lock-wait": (
+            'op="query_data_locks"',
+            "route: database-lock",
+            "for: 30s",
+        ),
+        "membershipflow-database-deadlock": (
+            "mysql_info_schema_innodb_metrics_lock_lock_deadlocks_total",
+            "route: database-deadlock",
+            "[5m]",
+        ),
+        "membershipflow-hikari-pending": (
+            "hikaricp_connections_pending",
+            "route: database-connection-pool",
+            "for: 1m",
+        ),
+        "membershipflow-database-slow-query": (
+            "mysql_global_status_slow_queries",
+            "route: database-slow-query",
+            "[5m]",
+        ),
+        "membershipflow-host-disk-low": (
+            "node_filesystem_avail_bytes",
+            "route: host-disk-space",
+            "params: [0.15]",
+        ),
+    }
+
+    for uid, required_fragments in expected_rules.items():
+        assert f"uid: {uid}" in rule
+        for fragment in required_fragments:
+            assert fragment in rule
+
+    assert rule.count('ai_analyze: "true"') == 5
+    assert rule.count("noDataState: OK") == 5
+
+
 def test_incident_notification_policy_is_the_only_root_policy() -> None:
     policy_files = sorted((PROVISIONING_ROOT / "alerting").glob("*policy.y*ml"))
 
