@@ -7,7 +7,7 @@
   },
   "evidence": {
     "schema_version": "1",
-    "collector_version": "loki-v1",
+    "collector_version": "loki-mysql-v2",
     "window_start": "2026-08-15T03:47:20Z",
     "window_end": "2026-08-15T03:57:20Z",
     "log_evidence": [
@@ -27,6 +27,15 @@
         "count": 10,
         "samples": [
           "HikariPool-1 - Connection is not available, request timed out after 30000ms"
+        ]
+      },
+      {
+        "evidence_id": "L3",
+        "status": "OK",
+        "signature": "mysql_lock|UPDATE subscription SET status = ? WHERE member_id = ?|SELECT member WHERE id = ? FOR UPDATE",
+        "count": 2,
+        "samples": [
+          "{\"source\":\"mysql_lock\",\"waiting_query\":\"UPDATE subscription SET status = ? WHERE member_id = ?\",\"blocking_query\":\"SELECT member WHERE id = ? FOR UPDATE\",\"waiting_duration\":\"45000ms\",\"blocking_duration\":\"46000ms\"}"
         ]
       }
     ],
@@ -58,6 +67,12 @@
         "evidenceIds": [
           "L2"
         ]
+      },
+      {
+        "statement": "구독 갱신 쿼리가 회원 행 잠금 쿼리를 기다린 blocker/waiter 관계가 확인되었습니다.",
+        "evidenceIds": [
+          "L3"
+        ]
       }
     ],
     "hypotheses": [
@@ -65,7 +80,8 @@
         "cause": "DB 락 경합으로 커넥션 반환이 지연되어 풀이 고갈된 가능성",
         "evidenceIds": [
           "L1",
-          "L2"
+          "L2",
+          "L3"
         ],
         "confidence": "HIGH"
       },

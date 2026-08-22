@@ -42,6 +42,16 @@ def test_prometheus_datasource_and_backend_down_rule_use_stable_uid() -> None:
     assert "route: application-health" in availability_rule
 
 
+def test_prometheus_scrapes_mysql_exporter_from_application_server() -> None:
+    prometheus_config = read(REPOSITORY_ROOT / "prometheus" / "prometheus.yml")
+    availability_rule = read(PROVISIONING_ROOT / "alerting" / "availability-rules.yaml")
+
+    assert "job_name: membershipflow-mysql" in prometheus_config
+    assert "targets: [membershipflow-app:9104]" in prometheus_config
+    assert 'up{job="membershipflow-mysql"}' in availability_rule
+    assert "route: database-health" in availability_rule
+
+
 def test_batch_rules_use_process_start_as_restart_grace_period() -> None:
     rule = read(PROVISIONING_ROOT / "alerting" / "rules.yaml")
 

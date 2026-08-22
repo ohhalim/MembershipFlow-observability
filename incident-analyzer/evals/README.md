@@ -4,6 +4,7 @@
 
 `payment-lock-pool-exhaustion.json`은 운영 DB 원문이 아니다. 2026-08-15 결제
 락 검증에서 확인한 수치와 Slack 분석 요약을 사용해 민감값 없이 재구성했다.
+MySQL blocker/waiter 근거도 실행 파라미터가 제거된 digest 형태로만 포함한다.
 
 ## 실행
 
