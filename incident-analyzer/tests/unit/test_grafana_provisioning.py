@@ -60,6 +60,14 @@ def test_batch_rules_use_process_start_as_restart_grace_period() -> None:
     assert "datasourceUid: prometheus" in rule
 
 
+def test_batch_rules_do_not_report_backend_no_data_as_stale_batch() -> None:
+    rule = read(PROVISIONING_ROOT / "alerting" / "rules.yaml")
+
+    assert rule.count("noDataState: OK") == 2
+    assert rule.count("execErrState: Error") == 2
+    assert "noDataState: Alerting" not in rule
+
+
 def test_database_and_disk_incident_rules_cover_operational_failure_modes() -> None:
     rule = read(PROVISIONING_ROOT / "alerting" / "database-resource-rules.yaml")
 

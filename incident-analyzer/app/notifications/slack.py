@@ -1,9 +1,11 @@
-from datetime import UTC
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import httpx
 
 from app.domain.notification import ClaimedNotificationDelivery
+
+KST = ZoneInfo("Asia/Seoul")
 
 
 class SlackDeliveryError(Exception):
@@ -90,7 +92,7 @@ def render_incident_message(
     alert_name = _event_value(delivery.masked_event, "alertname", "UnknownAlert")
     route = _event_value(delivery.masked_event, "route")
     status = str(result.get("status", "UNKNOWN"))
-    started_at = delivery.started_at.astimezone(UTC).isoformat()
+    started_at = delivery.started_at.astimezone(KST).strftime("%Y-%m-%d %H:%M:%S KST")
 
     text = f"MembershipFlow 장애 분석: {alert_name} ({status})"
     return {
