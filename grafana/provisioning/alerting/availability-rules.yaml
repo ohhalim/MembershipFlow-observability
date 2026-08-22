@@ -40,3 +40,38 @@ groups:
           route: application-health
         annotations:
           summary: "운영 백엔드 Prometheus scrape가 1분 이상 실패"
+
+      - uid: membershipflow-mysql-exporter-down
+        title: "운영 MySQL 관찰 중단"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: 'up{job="membershipflow-mysql"}'
+              instant: true
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [1]
+              refId: C
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 1m
+        labels:
+          ai_analyze: "true"
+          service: MembershipFlow-MySQL
+          environment: production
+          severity: warning
+          route: database-health
+        annotations:
+          summary: "운영 MySQL exporter scrape가 1분 이상 실패"
