@@ -15,7 +15,10 @@ scrape_configs:
     static_configs:
       - targets: [membershipflow-app:9100]
 
+  - job_name: membershipflow-mysql
+    static_configs:
+      - targets: [membershipflow-app:9104]
+
   - job_name: membershipflow-loki
     static_configs:
       - targets: [loki:3100]
-
