@@ -112,3 +112,11 @@ def test_cd_checks_only_alerting_provisioning_failures() -> None:
 
     assert "logger=provisioning.alerting.*level=error" in workflow
     assert "provisioning.*(error|failed)" not in workflow
+
+
+def test_cd_recreates_only_grafana_to_reload_provisioning_files() -> None:
+    workflow = read(REPOSITORY_ROOT / ".github" / "workflows" / "cd-pipeline.yml")
+
+    assert "docker compose up -d incident-api incident-worker\n" in workflow
+    assert "docker compose up -d --force-recreate --no-deps grafana" in workflow
+    assert "docker compose up -d incident-api incident-worker grafana" not in workflow
